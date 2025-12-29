@@ -30,7 +30,19 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
     static {
         PropertiesComponent instance = PropertiesComponent.getInstance();
         String tableHeaderValue = instance.getValue(WindowUtils.STOCK_TABLE_HEADER_KEY);
+        
+        // 检查是否需要更新表头（如果默认值包含新列但保存的配置中没有）
+        boolean needUpdate = false;
         if (StringUtils.isBlank(tableHeaderValue)) {
+            needUpdate = true;
+        } else {
+            // 检查保存的配置是否包含新列"盘前盘后"
+            if (!tableHeaderValue.contains("盘前盘后")) {
+                needUpdate = true;
+            }
+        }
+        
+        if (needUpdate) {
             instance.setValue(WindowUtils.STOCK_TABLE_HEADER_KEY, WindowUtils.STOCK_TABLE_HEADER_VALUE);
             tableHeaderValue = WindowUtils.STOCK_TABLE_HEADER_VALUE;
         }

@@ -1,6 +1,7 @@
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.actionSystem.ActionToolbarPosition;
+import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.popup.JBPopupFactory;
@@ -151,6 +152,11 @@ public class FundWindow implements ToolWindowFactory {
                 stop();
                 this.setEnabled(false);
             }
+
+            @Override
+            public @NotNull ActionUpdateThread getActionUpdateThread() {
+                return ActionUpdateThread.EDT;
+            }
         };
         ToolbarDecorator toolbarDecorator = ToolbarDecorator.createDecorator(table)
                 .addExtraAction(new AnActionButton("持续刷新当前表格数据", AllIcons.Actions.Refresh) {
@@ -158,6 +164,11 @@ public class FundWindow implements ToolWindowFactory {
                     public void actionPerformed(@NotNull AnActionEvent e) {
                         refresh();
                         refreshAction.setEnabled(true);
+                    }
+
+                    @Override
+                    public @NotNull ActionUpdateThread getActionUpdateThread() {
+                        return ActionUpdateThread.EDT;
                     }
                 })
                 .addExtraAction(refreshAction)

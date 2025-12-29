@@ -8,6 +8,8 @@
     <rowspec value="center:max(d;4px):noGrow"/>
     <rowspec value="top:4dlu:noGrow"/>
     <rowspec value="center:max(d;4px):noGrow"/>
+    <rowspec value="top:4dlu:noGrow"/>
+    <rowspec value="center:max(d;4px):noGrow"/>
     <colspec value="left:119px:noGrow"/>
     <colspec value="left:13dlu:noGrow"/>
     <colspec value="left:d:grow"/>
@@ -265,11 +267,11 @@
       </tabbedpane>
       <component id="8c26" class="javax.swing.JLabel">
         <constraints>
-          <grid row="6" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+          <grid row="8" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
           <forms/>
         </constraints>
         <properties>
-          <text value="小韭菜 V1.9.3"/>
+          <text value="小韭菜 V1.9.4"/>
         </properties>
       </component>
       <grid id="b17a5" layout-manager="FlowLayout" hgap="30" vgap="5" flow-align="0">
@@ -294,6 +296,15 @@
               <horizontalAlignment value="2"/>
               <horizontalTextPosition value="2"/>
               <text value="采用新浪股票接口(无港股美股数据)"/>
+            </properties>
+          </component>
+          <component id="lb001" class="javax.swing.JCheckBox" binding="checkboxLongbridge">
+            <constraints/>
+            <properties>
+              <horizontalAlignment value="2"/>
+              <horizontalTextPosition value="2"/>
+              <text value="采用长桥API(港股美股)"/>
+              <toolTipText value="使用长桥OpenAPI获取港股和美股实时行情"/>
             </properties>
           </component>
           <component id="3e6da" class="javax.swing.JCheckBox" binding="checkboxLog">
@@ -350,6 +361,71 @@
           <text value="test"/>
         </properties>
       </component>
+      <grid id="lb_panel" layout-manager="GridLayoutManager" row-count="3" column-count="2" same-size-horizontally="false" same-size-vertically="false" hgap="-1" vgap="5">
+        <margin top="5" left="0" bottom="0" right="0"/>
+        <constraints>
+          <grid row="6" column="0" row-span="1" col-span="5" vsize-policy="3" hsize-policy="3" anchor="0" fill="3" indent="0" use-parent-layout="false"/>
+          <forms/>
+        </constraints>
+        <properties/>
+        <border type="etched" title="长桥API配置 (港股美股行情)"/>
+        <children>
+          <component id="lb_key_label" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="0" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="App Key:"/>
+            </properties>
+          </component>
+          <component id="lb_key_input" class="javax.swing.JTextField" binding="inputLongbridgeAppKey">
+            <constraints>
+              <grid row="0" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="300" height="-1"/>
+              </grid>
+            </constraints>
+            <properties>
+              <toolTipText value="长桥开发者后台获取的 App Key"/>
+            </properties>
+          </component>
+          <component id="lb_secret_label" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="1" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="App Secret:"/>
+            </properties>
+          </component>
+          <component id="lb_secret_input" class="javax.swing.JTextField" binding="inputLongbridgeAppSecret">
+            <constraints>
+              <grid row="1" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="300" height="-1"/>
+              </grid>
+            </constraints>
+            <properties>
+              <toolTipText value="长桥开发者后台获取的 App Secret"/>
+            </properties>
+          </component>
+          <component id="lb_token_label" class="javax.swing.JLabel">
+            <constraints>
+              <grid row="2" column="0" row-span="1" col-span="1" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
+            </constraints>
+            <properties>
+              <text value="Access Token:"/>
+            </properties>
+          </component>
+          <component id="lb_token_input" class="javax.swing.JTextField" binding="inputLongbridgeAccessToken">
+            <constraints>
+              <grid row="2" column="1" row-span="1" col-span="1" vsize-policy="0" hsize-policy="6" anchor="8" fill="1" indent="0" use-parent-layout="false">
+                <preferred-size width="300" height="-1"/>
+              </grid>
+            </constraints>
+            <properties>
+              <toolTipText value="长桥开发者后台获取的 Access Token (有效期3个月)"/>
+            </properties>
+          </component>
+        </children>
+      </grid>
     </children>
   </grid>
 </form>

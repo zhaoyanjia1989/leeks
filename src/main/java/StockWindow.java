@@ -1,35 +1,28 @@
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.util.PropertiesComponent;
 import com.intellij.openapi.actionSystem.ActionToolbarPosition;
+import com.intellij.openapi.actionSystem.ActionUpdateThread;
 import com.intellij.openapi.actionSystem.AnActionEvent;
-import com.intellij.openapi.ui.popup.JBPopupFactory;
-import com.intellij.openapi.ui.popup.PopupStep;
-import com.intellij.openapi.ui.popup.util.BaseListPopupStep;
 import com.intellij.ui.AnActionButton;
 import com.intellij.ui.ToolbarDecorator;
-import com.intellij.ui.awt.RelativePoint;
 import com.intellij.ui.table.JBTable;
+import handler.LongbridgeStockHandler;
 import handler.SinaStockHandler;
 import handler.StockRefreshHandler;
 import handler.TencentStockHandler;
 import org.apache.commons.collections.CollectionUtils;
 import org.apache.commons.lang.StringUtils;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import quartz.HandlerJob;
 import quartz.QuartzManager;
 import utils.LogUtil;
-import utils.PopupsUiUtil;
 import utils.WindowUtils;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
-import java.net.MalformedURLException;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
@@ -68,43 +61,7 @@ public class StockWindow {
             }
 
         });
-        table.addMouseListener(new MouseAdapter() {
-            @Override
-            public void mousePressed(MouseEvent e) {
-                if (table.getSelectedRow() < 0)
-                    return;
-                String code = String.valueOf(table.getModel().getValueAt(table.convertRowIndexToModel(table.getSelectedRow()), handler.codeColumnIndex));//FIX 移动列导致的BUG
-                if (SwingUtilities.isLeftMouseButton(e) && e.getClickCount() > 1) {
-                    // 鼠标左键双击
-                    try {
-                        PopupsUiUtil.showImageByStockCode(code, PopupsUiUtil.StockShowType.min, new Point(e.getXOnScreen(), e.getYOnScreen()));
-                    } catch (MalformedURLException ex) {
-                        ex.printStackTrace();
-                        LogUtil.info(ex.getMessage());
-                    }
-                } else if (SwingUtilities.isRightMouseButton(e)) {
-                    //鼠标右键
-                    JBPopupFactory.getInstance().createListPopup(new BaseListPopupStep<PopupsUiUtil.StockShowType>("",
-                            PopupsUiUtil.StockShowType.values()) {
-                        @Override
-                        public @NotNull String getTextFor(PopupsUiUtil.StockShowType value) {
-                            return value.getDesc();
-                        }
-
-                        @Override
-                        public @Nullable PopupStep onChosen(PopupsUiUtil.StockShowType selectedValue, boolean finalChoice) {
-                            try {
-                                PopupsUiUtil.showImageByStockCode(code, selectedValue, new Point(e.getXOnScreen(), e.getYOnScreen()));
-                            } catch (MalformedURLException ex) {
-                                ex.printStackTrace();
-                                LogUtil.info(ex.getMessage());
-                            }
-                            return super.onChosen(selectedValue, finalChoice);
-                        }
-                    }).show(RelativePoint.fromScreen(new Point(e.getXOnScreen(), e.getYOnScreen())));
-                }
-            }
-        });
+        // 已删除点击展示图形功能
     }
 
     public StockWindow() {
@@ -118,6 +75,11 @@ public class StockWindow {
                 stop();
                 this.setEnabled(false);
             }
+
+            @Override
+            public @NotNull ActionUpdateThread getActionUpdateThread() {
+                return ActionUpdateThread.EDT;
+            }
         };
         ToolbarDecorator toolbarDecorator = ToolbarDecorator.createDecorator(table)
                 .addExtraAction(new AnActionButton("持续刷新当前表格数据", AllIcons.Actions.Refresh) {
@@ -125,6 +87,11 @@ public class StockWindow {
                     public void actionPerformed(@NotNull AnActionEvent e) {
                         refresh();
                         refreshAction.setEnabled(true);
+                    }
+
+                    @Override
+                    public @NotNull ActionUpdateThread getActionUpdateThread() {
+                        return ActionUpdateThread.EDT;
                     }
                 })
                 .addExtraAction(refreshAction)
@@ -138,17 +105,31 @@ public class StockWindow {
     }
 
     private static StockRefreshHandler factoryHandler(){
-        boolean useSinaApi = PropertiesComponent.getInstance().getBoolean("key_stocks_sina");
+        PropertiesComponent instance = PropertiesComponent.getInstance();
+        boolean useSinaApi = instance.getBoolean("key_stocks_sina");
+        boolean useLongbridgeApi = instance.getBoolean("key_stocks_longbridge");
+        
+        // 优先使用长桥API（港股美股）
+        if (useLongbridgeApi) {
+            if (handler instanceof LongbridgeStockHandler) {
+                return handler;
+            }
+            return new LongbridgeStockHandler(table, refreshTimeLabel);
+        }
+        
+        // 其次使用新浪API
         if (useSinaApi){
             if (handler instanceof SinaStockHandler){
                 return handler;
             }
             return new SinaStockHandler(table, refreshTimeLabel);
         }
+        
+        // 默认使用腾讯API
         if (handler instanceof TencentStockHandler){
             return handler;
         }
-        return  new TencentStockHandler(table, refreshTimeLabel);
+        return new TencentStockHandler(table, refreshTimeLabel);
     }
 
     public static void apply() {
@@ -169,7 +150,14 @@ public class StockWindow {
             if (CollectionUtils.isEmpty(codes)) {
                 stop(); //如果没有数据则不需要启动时钟任务浪费资源
             } else {
-                handler.handle(codes);
+                // 异步执行API调用，避免阻塞UI线程
+                new Thread(() -> {
+                    try {
+                        handler.handle(codes);
+                    } catch (Exception e) {
+                        LogUtil.info("刷新股票数据失败: " + e.getMessage());
+                    }
+                }).start();
                 QuartzManager quartzManager = QuartzManager.getInstance(NAME);
                 HashMap<String, Object> dataMap = new HashMap<>();
                 dataMap.put(HandlerJob.KEY_HANDLER, handler);

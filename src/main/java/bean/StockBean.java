@@ -29,6 +29,7 @@ public class StockBean {
     private String bonds;//持仓
     private String incomePercent;//收益率
     private String income;//收益
+    private String prePostPrice;//盘前/盘后/夜盘价格
 
     public StockBean() {
     }
@@ -171,6 +172,14 @@ public class StockBean {
         this.income = income;
     }
 
+    public String getPrePostPrice() {
+        return prePostPrice;
+    }
+
+    public void setPrePostPrice(String prePostPrice) {
+        this.prePostPrice = prePostPrice;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -230,6 +239,8 @@ public class StockBean {
                     timeStr = this.getTime().substring(8);
                 }
                 return timeStr;
+            case "盘前盘后":
+                return this.getPrePostPrice() != null ? this.getPrePostPrice() : "--";
             default:
                 return "";
 

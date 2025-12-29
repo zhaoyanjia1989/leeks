@@ -36,6 +36,11 @@ public class SettingsWindow  implements Configurable {
     private JLabel proxyLabel;
     private JTextField inputProxy;
     private JButton proxyTestButton;
+    // 长桥API配置
+    private JCheckBox checkboxLongbridge;
+    private JTextField inputLongbridgeAppKey;
+    private JTextField inputLongbridgeAppSecret;
+    private JTextField inputLongbridgeAccessToken;
 
     @Override
     public @Nls(capitalization = Nls.Capitalization.Title) String getDisplayName() {
@@ -68,6 +73,22 @@ public class SettingsWindow  implements Configurable {
                 testProxy(proxy);
             }
         });
+        // 长桥API配置
+        checkboxLongbridge.setSelected(instance.getBoolean("key_stocks_longbridge"));
+        inputLongbridgeAppKey.setText(instance.getValue("key_longbridge_app_key", ""));
+        inputLongbridgeAppSecret.setText(instance.getValue("key_longbridge_app_secret", ""));
+        inputLongbridgeAccessToken.setText(instance.getValue("key_longbridge_access_token", ""));
+        // 长桥和新浪互斥
+        checkboxLongbridge.addActionListener(e -> {
+            if (checkboxLongbridge.isSelected()) {
+                checkboxSina.setSelected(false);
+            }
+        });
+        checkboxSina.addActionListener(e -> {
+            if (checkboxSina.isSelected()) {
+                checkboxLongbridge.setSelected(false);
+            }
+        });
         return panel1;
     }
 
@@ -95,10 +116,18 @@ public class SettingsWindow  implements Configurable {
         instance.setValue("key_close_log",checkboxLog.isSelected());
         String proxy = inputProxy.getText().trim();
         instance.setValue("key_proxy",proxy);
+        // 保存长桥API配置
+        instance.setValue("key_stocks_longbridge", checkboxLongbridge.isSelected());
+        instance.setValue("key_longbridge_app_key", inputLongbridgeAppKey.getText().trim());
+        instance.setValue("key_longbridge_app_secret", inputLongbridgeAppSecret.getText().trim());
+        instance.setValue("key_longbridge_access_token", inputLongbridgeAccessToken.getText().trim());
         HttpClientPool.getHttpClient().buildHttpClient(proxy);
-        StockWindow.apply();
-        FundWindow.apply();
-        CoinWindow.apply();
+        // 异步执行，避免阻塞Settings窗口
+        javax.swing.SwingUtilities.invokeLater(() -> {
+            StockWindow.apply();
+            FundWindow.apply();
+            CoinWindow.apply();
+        });
     }
 
 
