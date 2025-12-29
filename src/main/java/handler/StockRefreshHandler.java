@@ -31,7 +31,7 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
         PropertiesComponent instance = PropertiesComponent.getInstance();
         String tableHeaderValue = instance.getValue(WindowUtils.STOCK_TABLE_HEADER_KEY);
         
-        // 检查是否需要更新表头（如果默认值包含新列但保存的配置中没有）
+        // 检查是否需要更新表头（如果默认值包含新列但保存的配置中没有，或者位置不对）
         boolean needUpdate = false;
         if (StringUtils.isBlank(tableHeaderValue)) {
             needUpdate = true;
@@ -39,6 +39,14 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
             // 检查保存的配置是否包含新列"盘前盘后"
             if (!tableHeaderValue.contains("盘前盘后")) {
                 needUpdate = true;
+            } else {
+                // 检查"盘前盘后"是否在"更新时间"之后（应该在最后一列）
+                int updateTimeIndex = tableHeaderValue.indexOf("更新时间");
+                int prePostIndex = tableHeaderValue.indexOf("盘前盘后");
+                if (updateTimeIndex != -1 && prePostIndex != -1 && prePostIndex < updateTimeIndex) {
+                    // "盘前盘后"在"更新时间"之前，需要更新位置
+                    needUpdate = true;
+                }
             }
         }
         

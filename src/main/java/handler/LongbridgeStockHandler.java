@@ -9,7 +9,6 @@ import com.longport.quote.SecurityQuote;
 import com.longport.quote.SecurityStaticInfo;
 import com.longport.quote.PrePostQuote;
 import org.apache.commons.lang.StringUtils;
-import utils.LogUtil;
 
 import javax.swing.*;
 import java.math.BigDecimal;
@@ -143,7 +142,6 @@ public class LongbridgeStockHandler extends StockRefreshHandler {
         String accessToken = instance.getValue("key_longbridge_access_token", "");
 
         if (StringUtils.isEmpty(appKey) || StringUtils.isEmpty(appSecret) || StringUtils.isEmpty(accessToken)) {
-            LogUtil.info("长桥API配置不完整，请在设置中配置 API Key, API Secret 和 Access Token");
             return;
         }
 
@@ -158,24 +156,18 @@ public class LongbridgeStockHandler extends StockRefreshHandler {
                 // 使用静态方法create创建QuoteContext
                 CompletableFuture<QuoteContext> contextFuture = QuoteContext.create(config);
                 quoteContext = contextFuture.get(); // 等待创建完成
-                LogUtil.info("长桥SDK配置已初始化");
             }
 
             // 转换为字符串数组
             String[] symbolStrings = longbridgeCodes.toArray(new String[0]);
 
-            LogUtil.info("=== 长桥SDK请求 ===");
-            LogUtil.info("Symbols: " + String.join(",", longbridgeCodes));
-
             // 使用SDK获取实时行情和静态信息
-            long startTime = System.currentTimeMillis();
             CompletableFuture<SecurityQuote[]> quoteFuture = quoteContext.getQuote(symbolStrings);
             CompletableFuture<SecurityStaticInfo[]> staticInfoFuture = quoteContext.getStaticInfo(symbolStrings);
             
             // 等待异步结果
             SecurityQuote[] quotes = quoteFuture.get();
             SecurityStaticInfo[] staticInfos = staticInfoFuture.get();
-            long endTime = System.currentTimeMillis();
 
             // 创建symbol到名称的映射
             Map<String, String> symbolToNameMap = new HashMap<>();
@@ -183,25 +175,13 @@ public class LongbridgeStockHandler extends StockRefreshHandler {
                 symbolToNameMap.put(info.getSymbol(), info.getNameCn());
             }
 
-            LogUtil.info("=== 长桥SDK响应 ===");
-            LogUtil.info("响应时间: " + (endTime - startTime) + "ms");
-            LogUtil.info("获取到 " + quotes.length + " 条行情数据");
-            LogUtil.info("==================");
-
             // 解析行情数据
             for (SecurityQuote quote : quotes) {
                 parseQuote(quote, symbolToNameMap);
             }
             updateUI();
         } catch (Exception e) {
-            String errorMsg = e.getMessage();
-            LogUtil.info("长桥SDK请求失败: " + errorMsg);
-            
-            LogUtil.info("异常堆栈: ");
-            java.io.StringWriter sw = new java.io.StringWriter();
-            java.io.PrintWriter pw = new java.io.PrintWriter(sw);
-            e.printStackTrace(pw);
-            LogUtil.info(sw.toString());
+            // 静默处理异常
         }
     }
 
@@ -301,22 +281,34 @@ public class LongbridgeStockHandler extends StockRefreshHandler {
 
             updateData(bean);
         } catch (Exception e) {
-            LogUtil.info("解析股票数据失败: " + e.getMessage());
+            // 静默处理异常
         }
     }
 
     /**
      * 解析盘前/盘后/夜盘价格
-     * 按顺序检查盘前、盘后、夜盘，哪个不为0就显示哪个
+     * 根据哪个有数据且价格不为0来判断当前时段，并显示对应的价格
+     * 如果多个都有数据，优先显示盘前，然后是盘后，最后是夜盘
      */
     private String parsePrePostPrice(SecurityQuote quote) {
         try {
+            java.time.OffsetDateTime now = java.time.OffsetDateTime.now();
+            
             // 检查盘前，如果不为null且价格不为0
             PrePostQuote preMarket = quote.getPreMarketQuote();
             if (preMarket != null && preMarket.getLastDone() != null) {
                 BigDecimal prePrice = preMarket.getLastDone();
                 if (prePrice.compareTo(BigDecimal.ZERO) != 0) {
-                    return "盘前:" + prePrice.toString();
+                    // 检查时间戳，如果时间戳较新（比如在最近1小时内），说明可能是当前盘前时段
+                    if (preMarket.getTimestamp() != null) {
+                        java.time.Duration duration = java.time.Duration.between(preMarket.getTimestamp(), now);
+                        if (duration.toHours() < 1) { // 1小时内的数据认为是当前时段
+                            return "盘前:" + prePrice.toString();
+                        }
+                    } else {
+                        // 没有时间戳，直接显示
+                        return "盘前:" + prePrice.toString();
+                    }
                 }
             }
             
@@ -325,7 +317,16 @@ public class LongbridgeStockHandler extends StockRefreshHandler {
             if (postMarket != null && postMarket.getLastDone() != null) {
                 BigDecimal postPrice = postMarket.getLastDone();
                 if (postPrice.compareTo(BigDecimal.ZERO) != 0) {
-                    return "盘后:" + postPrice.toString();
+                    // 检查时间戳，如果时间戳较新（比如在最近1小时内），说明可能是当前盘后时段
+                    if (postMarket.getTimestamp() != null) {
+                        java.time.Duration duration = java.time.Duration.between(postMarket.getTimestamp(), now);
+                        if (duration.toHours() < 1) { // 1小时内的数据认为是当前时段
+                            return "盘后:" + postPrice.toString();
+                        }
+                    } else {
+                        // 没有时间戳，直接显示
+                        return "盘后:" + postPrice.toString();
+                    }
                 }
             }
             
@@ -334,11 +335,34 @@ public class LongbridgeStockHandler extends StockRefreshHandler {
             if (overnight != null && overnight.getLastDone() != null) {
                 BigDecimal overnightPrice = overnight.getLastDone();
                 if (overnightPrice.compareTo(BigDecimal.ZERO) != 0) {
-                    return "夜盘:" + overnightPrice.toString();
+                    // 检查时间戳，如果时间戳较新（比如在最近1小时内），说明可能是当前夜盘时段
+                    if (overnight.getTimestamp() != null) {
+                        java.time.Duration duration = java.time.Duration.between(overnight.getTimestamp(), now);
+                        if (duration.toHours() < 1) { // 1小时内的数据认为是当前时段
+                            return "夜盘:" + overnightPrice.toString();
+                        }
+                    } else {
+                        // 没有时间戳，直接显示
+                        return "夜盘:" + overnightPrice.toString();
+                    }
                 }
             }
+            
+            // 如果都没有时间戳或时间戳较旧，按优先级显示（盘前 > 盘后 > 夜盘）
+            if (preMarket != null && preMarket.getLastDone() != null && 
+                preMarket.getLastDone().compareTo(BigDecimal.ZERO) != 0) {
+                return "盘前:" + preMarket.getLastDone().toString();
+            }
+            if (postMarket != null && postMarket.getLastDone() != null && 
+                postMarket.getLastDone().compareTo(BigDecimal.ZERO) != 0) {
+                return "盘后:" + postMarket.getLastDone().toString();
+            }
+            if (overnight != null && overnight.getLastDone() != null && 
+                overnight.getLastDone().compareTo(BigDecimal.ZERO) != 0) {
+                return "夜盘:" + overnight.getLastDone().toString();
+            }
         } catch (Exception e) {
-            LogUtil.info("解析盘前/盘后/夜盘价格失败: " + e.getMessage());
+            // 静默处理异常
         }
         return "--";
     }
@@ -352,7 +376,7 @@ public class LongbridgeStockHandler extends StockRefreshHandler {
 
     @Override
     public void stopHandle() {
-        LogUtil.info("长桥股票行情刷新已停止");
+        // 停止处理
     }
 }
 
