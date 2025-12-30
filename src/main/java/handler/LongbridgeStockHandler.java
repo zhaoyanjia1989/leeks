@@ -244,8 +244,7 @@ public class LongbridgeStockHandler extends StockRefreshHandler {
             }
 
             // 解析盘前/盘后/夜盘价格
-            String prePostPrice = parsePrePostPrice(quote);
-            bean.setPrePostPrice(prePostPrice);
+            parsePrePostPrice(quote, bean);
 
             // 更新时间 - 使用当前刷新时间，格式与其他handler保持一致
             // StockBean.getValueByColumn 会使用 substring(8) 截取时间部分
@@ -287,84 +286,54 @@ public class LongbridgeStockHandler extends StockRefreshHandler {
 
     /**
      * 解析盘前/盘后/夜盘价格
-     * 根据哪个有数据且价格不为0来判断当前时段，并显示对应的价格
-     * 如果多个都有数据，优先显示盘前，然后是盘后，最后是夜盘
+     * 分别设置三个独立的价格字段
      */
-    private String parsePrePostPrice(SecurityQuote quote) {
+    private void parsePrePostPrice(SecurityQuote quote, StockBean bean) {
         try {
-            java.time.OffsetDateTime now = java.time.OffsetDateTime.now();
-            
-            // 检查盘前，如果不为null且价格不为0
-            PrePostQuote preMarket = quote.getPreMarketQuote();
-            if (preMarket != null && preMarket.getLastDone() != null) {
-                BigDecimal prePrice = preMarket.getLastDone();
-                if (prePrice.compareTo(BigDecimal.ZERO) != 0) {
-                    // 检查时间戳，如果时间戳较新（比如在最近1小时内），说明可能是当前盘前时段
-                    if (preMarket.getTimestamp() != null) {
-                        java.time.Duration duration = java.time.Duration.between(preMarket.getTimestamp(), now);
-                        if (duration.toHours() < 1) { // 1小时内的数据认为是当前时段
-                            return "盘前:" + prePrice.toString();
-                        }
-                    } else {
-                        // 没有时间戳，直接显示
-                        return "盘前:" + prePrice.toString();
-                    }
-                }
-            }
-            
-            // 检查盘后，如果不为null且价格不为0
+            // 解析盘后价格
             PrePostQuote postMarket = quote.getPostMarketQuote();
             if (postMarket != null && postMarket.getLastDone() != null) {
                 BigDecimal postPrice = postMarket.getLastDone();
                 if (postPrice.compareTo(BigDecimal.ZERO) != 0) {
-                    // 检查时间戳，如果时间戳较新（比如在最近1小时内），说明可能是当前盘后时段
-                    if (postMarket.getTimestamp() != null) {
-                        java.time.Duration duration = java.time.Duration.between(postMarket.getTimestamp(), now);
-                        if (duration.toHours() < 1) { // 1小时内的数据认为是当前时段
-                            return "盘后:" + postPrice.toString();
-                        }
-                    } else {
-                        // 没有时间戳，直接显示
-                        return "盘后:" + postPrice.toString();
-                    }
+                    bean.setPostPrice(postPrice.toString());
+                } else {
+                    bean.setPostPrice("--");
                 }
+            } else {
+                bean.setPostPrice("--");
             }
             
-            // 检查夜盘，如果不为null且价格不为0
+            // 解析夜盘价格
             PrePostQuote overnight = quote.getOvernightQuote();
             if (overnight != null && overnight.getLastDone() != null) {
                 BigDecimal overnightPrice = overnight.getLastDone();
                 if (overnightPrice.compareTo(BigDecimal.ZERO) != 0) {
-                    // 检查时间戳，如果时间戳较新（比如在最近1小时内），说明可能是当前夜盘时段
-                    if (overnight.getTimestamp() != null) {
-                        java.time.Duration duration = java.time.Duration.between(overnight.getTimestamp(), now);
-                        if (duration.toHours() < 1) { // 1小时内的数据认为是当前时段
-                            return "夜盘:" + overnightPrice.toString();
-                        }
-                    } else {
-                        // 没有时间戳，直接显示
-                        return "夜盘:" + overnightPrice.toString();
-                    }
+                    bean.setOvernightPrice(overnightPrice.toString());
+                } else {
+                    bean.setOvernightPrice("--");
                 }
+            } else {
+                bean.setOvernightPrice("--");
             }
             
-            // 如果都没有时间戳或时间戳较旧，按优先级显示（盘前 > 盘后 > 夜盘）
-            if (preMarket != null && preMarket.getLastDone() != null && 
-                preMarket.getLastDone().compareTo(BigDecimal.ZERO) != 0) {
-                return "盘前:" + preMarket.getLastDone().toString();
-            }
-            if (postMarket != null && postMarket.getLastDone() != null && 
-                postMarket.getLastDone().compareTo(BigDecimal.ZERO) != 0) {
-                return "盘后:" + postMarket.getLastDone().toString();
-            }
-            if (overnight != null && overnight.getLastDone() != null && 
-                overnight.getLastDone().compareTo(BigDecimal.ZERO) != 0) {
-                return "夜盘:" + overnight.getLastDone().toString();
+            // 解析盘前价格
+            PrePostQuote preMarket = quote.getPreMarketQuote();
+            if (preMarket != null && preMarket.getLastDone() != null) {
+                BigDecimal prePrice = preMarket.getLastDone();
+                if (prePrice.compareTo(BigDecimal.ZERO) != 0) {
+                    bean.setPrePrice(prePrice.toString());
+                } else {
+                    bean.setPrePrice("--");
+                }
+            } else {
+                bean.setPrePrice("--");
             }
         } catch (Exception e) {
-            // 静默处理异常
+            // 静默处理异常，设置默认值
+            bean.setPostPrice("--");
+            bean.setOvernightPrice("--");
+            bean.setPrePrice("--");
         }
-        return "--";
     }
 
     private void updateUI() {

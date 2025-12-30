@@ -3,8 +3,6 @@ package bean;
 import org.apache.commons.lang3.StringUtils;
 import utils.PinYinUtils;
 
-import java.time.LocalDate;
-import java.time.format.DateTimeFormatter;
 import java.util.Map;
 import java.util.Objects;
 
@@ -29,7 +27,9 @@ public class StockBean {
     private String bonds;//持仓
     private String incomePercent;//收益率
     private String income;//收益
-    private String prePostPrice;//盘前/盘后/夜盘价格
+    private String postPrice;//盘后价格
+    private String overnightPrice;//夜盘价格
+    private String prePrice;//盘前价格
 
     public StockBean() {
     }
@@ -172,12 +172,28 @@ public class StockBean {
         this.income = income;
     }
 
-    public String getPrePostPrice() {
-        return prePostPrice;
+    public String getPostPrice() {
+        return postPrice;
     }
 
-    public void setPrePostPrice(String prePostPrice) {
-        this.prePostPrice = prePostPrice;
+    public void setPostPrice(String postPrice) {
+        this.postPrice = postPrice;
+    }
+
+    public String getOvernightPrice() {
+        return overnightPrice;
+    }
+
+    public void setOvernightPrice(String overnightPrice) {
+        this.overnightPrice = overnightPrice;
+    }
+
+    public String getPrePrice() {
+        return prePrice;
+    }
+
+    public void setPrePrice(String prePrice) {
+        this.prePrice = prePrice;
     }
 
     @Override
@@ -239,8 +255,12 @@ public class StockBean {
                     timeStr = this.getTime().substring(8);
                 }
                 return timeStr;
-            case "盘前盘后":
-                return this.getPrePostPrice() != null ? this.getPrePostPrice() : "--";
+            case "盘后":
+                return this.getPostPrice() != null ? this.getPostPrice() : "--";
+            case "夜盘":
+                return this.getOvernightPrice() != null ? this.getOvernightPrice() : "--";
+            case "盘前":
+                return this.getPrePrice() != null ? this.getPrePrice() : "--";
             default:
                 return "";
 

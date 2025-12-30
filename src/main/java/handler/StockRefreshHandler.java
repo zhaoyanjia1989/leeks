@@ -36,15 +36,20 @@ public abstract class StockRefreshHandler extends DefaultTableModel {
         if (StringUtils.isBlank(tableHeaderValue)) {
             needUpdate = true;
         } else {
-            // 检查保存的配置是否包含新列"盘前盘后"
-            if (!tableHeaderValue.contains("盘前盘后")) {
+            // 检查保存的配置是否包含新列"盘后"、"夜盘"、"盘前"
+            if (!tableHeaderValue.contains("盘后") || !tableHeaderValue.contains("夜盘") || !tableHeaderValue.contains("盘前")) {
                 needUpdate = true;
             } else {
-                // 检查"盘前盘后"是否在"更新时间"之后（应该在最后一列）
+                // 检查"盘后"、"夜盘"、"盘前"是否在"更新时间"之后（应该在最后一列）
                 int updateTimeIndex = tableHeaderValue.indexOf("更新时间");
-                int prePostIndex = tableHeaderValue.indexOf("盘前盘后");
-                if (updateTimeIndex != -1 && prePostIndex != -1 && prePostIndex < updateTimeIndex) {
-                    // "盘前盘后"在"更新时间"之前，需要更新位置
+                int postIndex = tableHeaderValue.indexOf("盘后");
+                int overnightIndex = tableHeaderValue.indexOf("夜盘");
+                int preIndex = tableHeaderValue.indexOf("盘前");
+                if (updateTimeIndex != -1 && 
+                    (postIndex != -1 && postIndex < updateTimeIndex || 
+                     overnightIndex != -1 && overnightIndex < updateTimeIndex || 
+                     preIndex != -1 && preIndex < updateTimeIndex)) {
+                    // 新列在"更新时间"之前，需要更新位置
                     needUpdate = true;
                 }
             }
