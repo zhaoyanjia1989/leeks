@@ -304,26 +304,18 @@ public class LongbridgeStockHandler extends StockRefreshHandler {
             }
             
             // 解析夜盘价格
-            // 注意：长桥API的getOvernightQuote()可能不返回数据
-            // 如果夜盘数据为空，使用盘后数据作为替代（因为盘后是最接近夜盘的时段）
+            // 注意：长桥API的getOvernightQuote()目前返回null，不提供夜盘数据
+            // 夜盘(Overnight Session)是美东20:00-04:00的交易时段，需要更高级的数据订阅
             PrePostQuote overnight = quote.getOvernightQuote();
-            boolean overnightSet = false;
             if (overnight != null && overnight.getLastDone() != null) {
                 BigDecimal overnightPrice = overnight.getLastDone();
                 if (overnightPrice.compareTo(BigDecimal.ZERO) != 0) {
                     bean.setOvernightPrice(overnightPrice.toString());
-                    overnightSet = true;
+                } else {
+                    bean.setOvernightPrice("--");
                 }
-            }
-            // 如果夜盘数据不可用，使用盘后数据作为替代
-            if (!overnightSet && postMarket != null && postMarket.getLastDone() != null) {
-                BigDecimal postPrice = postMarket.getLastDone();
-                if (postPrice.compareTo(BigDecimal.ZERO) != 0) {
-                    bean.setOvernightPrice(postPrice.toString());
-                    overnightSet = true;
-                }
-            }
-            if (!overnightSet) {
+            } else {
+                // 长桥不提供夜盘数据，显示"--"
                 bean.setOvernightPrice("--");
             }
             
